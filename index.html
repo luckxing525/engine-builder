@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Torquesmith — Engine Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="#f0efec" stroke-width="2"/><path d="M16 16 L25 9" stroke="#d03b3b" stroke-width="2.5" stroke-linecap="round"/><circle cx="16" cy="16" r="2.5" fill="#f0efec"/><path d="M6 22a12 12 0 0 1 0-12" stroke="#3987e5" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+    <div><b>TORQUESMITH</b><span>ENGINE LAB · BUILD · TUNE · DYNO</span></div>
+  </div>
+  <div class="build-name"><input id="buildName" aria-label="Build name" maxlength="40"></div>
+  <div class="top-actions">
+    <div class="mini-seg mode-seg" id="modeSeg"><button data-m="sandbox" class="on">Sandbox</button><button data-m="career">Career</button></div>
+    <select id="presetSel" class="sel" aria-label="Load a preset"></select>
+    <button class="btn" id="btnSave" title="Save to garage">Save</button>
+  </div>
+</header>
+
+<main class="app" id="app">
+  <aside class="parts">
+    <div class="career-bar" id="careerBar" hidden></div>
+    <nav class="part-tabs" id="partTabs"></nav>
+    <div class="part-body" id="partBody"></div>
+    <div class="part-summary" id="partSummary"></div>
+  </aside>
+
+  <section class="center">
+    <nav class="view-tabs" id="viewTabs">
+      <button data-view="dyno" class="on">Dyno</button>
+      <button data-view="drag">Drag strip</button>
+      <button data-view="drive">3D Test Track</button>
+      <button data-view="garage">Garage</button>
+      <button data-view="challenges">Challenges <span class="badge" id="chalBadge"></span></button>
+      <button data-view="career" hidden>Career</button>
+    </nav>
+
+    <div class="view" id="view-dyno">
+      <div class="tiles" id="tiles"></div>
+      <div class="chart-bar">
+        <div class="legend" id="legend"></div>
+        <div class="chart-ctrls">
+          <div class="mini-seg" id="unitP"><button data-u="hp" class="on">hp</button><button data-u="kW">kW</button><button data-u="PS">PS</button></div>
+          <div class="mini-seg" id="unitT"><button data-u="Nm" class="on">Nm</button><button data-u="lbft">lb-ft</button></div>
+          <button class="btn small" id="btnPin">Pin as baseline</button>
+          <button class="btn small ghost" id="btnUnpin" hidden>Clear baseline</button>
+        </div>
+      </div>
+      <div class="charts" id="charts">
+        <div class="chart-card"><h3>Power <span class="peak" id="pkPower"></span></h3><canvas id="chPower" aria-label="Power curve"></canvas></div>
+        <div class="chart-card"><h3>Torque <span class="peak" id="pkTorque"></span></h3><canvas id="chTorque" aria-label="Torque curve"></canvas></div>
+        <div class="chart-card"><h3>
+          <select id="auxSel" aria-label="Secondary chart">
+            <option value="boost">Boost pressure</option>
+            <option value="ve">Volumetric efficiency</option>
+            <option value="lambda">Air-fuel ratio (λ)</option>
+            <option value="egt">Exhaust gas temp</option>
+            <option value="retard">Knock retard</option>
+            <option value="bte">Thermal efficiency</option>
+            <option value="elec">Electric boost power</option>
+          </select><span class="peak" id="pkAux"></span></h3>
+          <canvas id="chAux" aria-label="Secondary curve"></canvas></div>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+      <div class="warns" id="warns"></div>
+      <details class="table"><summary>Data table</summary><div id="dataTable"></div></details>
+    </div>
+
+    <div class="view" id="view-drag" hidden>
+      <div class="drag-wrap">
+        <div class="drag-bar">
+          <button class="btn primary" id="btnRun">▶ Run the 1/4 mile</button>
+          <label class="status">Opponent</label>
+          <select class="sel" id="rivalSel"></select>
+          <span class="gearinfo" id="gearInfo"></span>
+        </div>
+        <canvas id="stripCv"></canvas>
+        <div class="drag-hud">
+          <div><span>Speed</span><b id="hudSpd">0</b></div>
+          <div><span>Gear</span><b id="hudGear">N</b></div>
+          <div><span>Time</span><b id="hudTime">0.000</b></div>
+          <div><span>Distance</span><b id="hudDist">0 ft</b></div>
+          <div><span id="hudXLabel">Boost</span><b id="hudX">—</b></div>
+        </div>
+        <div class="slip" id="slip"></div>
+        <div class="ok-line" id="dragNote">Car setup (weight, tires, drivetrain, gearbox) lives in the <b>Car</b> tab on the left. Launch uses a 2-step rev limiter at your launch rpm.</div>
+      </div>
+    </div>
+
+    <div class="view" id="view-garage" hidden>
+      <div class="sec-h">Your saved builds</div>
+      <div class="grid-cards" id="savedList"></div>
+      <div class="sec-h">Share a build</div>
+      <div class="ok-line">Copy a build code to send to a friend, or paste one to load it.</div>
+      <div class="share"><input id="shareCode" placeholder="Paste a build code here…" aria-label="Build code"><button class="btn" id="btnCopyCode">Copy code</button><button class="btn" id="btnLoadCode">Load</button></div>
+      <div class="sec-h">Preset engines</div>
+      <div class="grid-cards" id="presetList"></div>
+    </div>
+
+    <div class="view" id="view-career" hidden></div>
+
+    <div class="view" id="view-drive" hidden>
+      <div class="drive-stage" id="driveStage">
+        <div class="dhud">
+          <div class="d-tl"><div class="d-timer" id="dTimer">0.000</div><div class="d-dist" id="dDist">0 ft</div></div>
+          <div class="d-msg" id="dMsg"></div>
+          <div class="d-tr"><button class="btn small" id="dUnits">km/h</button><button class="btn small" id="dCam">Chase cam</button><button class="btn small" id="dTrans">Auto shift</button><button class="btn small" id="dReset">Reset</button></div>
+          <div class="d-dash">
+            <canvas id="dTach"></canvas>
+            <div class="d-right">
+              <div class="d-shift" id="dShift"></div>
+              <div class="d-speed"><b id="dSpd">0</b><span id="dUnit">km/h</span></div>
+              <div class="d-fuel"><div class="d-fbar"><i id="dFuelBar"></i></div><span id="dFuelTxt">⛽ —</span></div>
+              <div class="d-sub" id="dSub"></div>
+            </div>
+          </div>
+          <div class="d-splits" id="dSplits"></div>
+          <div class="d-brakes" id="dBrakes"></div>
+          <button class="d-pedal brake" id="dBrake">BRAKE<small>S / ↓ / Space</small></button>
+          <button class="d-pedal gas" id="dGas">GAS<small>W / ↑</small></button>
+          <div class="d-gearbtns"><button id="dDown" title="Downshift (−)">−</button><button id="dUp" title="Upshift (+)">+</button></div>
+        </div>
+        <div class="d-nogl" id="dNoGL" hidden>The 3D track needs WebGL, which isn’t available in this browser.</div>
+      </div>
+      <div class="drive-below">
+        <div class="card"><div class="card-h"><b>Timing board</b><button class="btn small ghost" id="dClear">Clear bests</button></div><div id="dTable"></div>
+          <div class="ok-line" style="margin-top:6px">Bests reset when you change the build. The strip never ends — keep it pinned for top speed, then brake.</div></div>
+        <div class="card"><div class="card-h"><b>How to launch</b></div>
+          <ol class="howto">
+            <li>Press <kbd>W</kbd> / GAS to start the engine.</li>
+            <li>Hold <kbd>S</kbd> (brake), then hold <kbd>W</kbd> too — launch control holds the revs at your launch rpm (set it in the Car tab) and builds boost.</li>
+            <li>Watch the tree: three ambers… then let go of the brake. Leave early and you get a red light.</li>
+            <li>Stay on the gas. Auto shifts for you — or shift yourself with <kbd>+</kbd> / <kbd>−</kbd> (switches to manual; <kbd>M</kbd> toggles back).</li>
+            <li>Brake with <kbd>S</kbd> (tap it to modulate without ABS), <kbd>P</kbd> pops the parachute if fitted. <kbd>C</kbd> changes camera, <kbd>R</kbd> resets to the start line, <kbd>Enter</kbd> starts/stops the engine.</li>
+          </ol></div>
+      </div>
+    </div>
+
+    <div class="view" id="view-challenges" hidden>
+      <div class="ok-line" style="margin-bottom:12px">Goals check against your current build (and your last drag run). Completed challenges are remembered in this browser.</div>
+      <div class="grid-cards" id="chalList"></div>
+    </div>
+  </section>
+
+  <aside class="bay">
+    <div class="card">
+      <div class="card-h"><b id="engTitle">Engine</b><span id="slowmo"></span></div>
+      <canvas id="engineCv"></canvas>
+      <div class="legend-strokes"><span><i style="background:#3987e5"></i>Intake</span><span><i style="background:#9085e9"></i>Compression</span><span><i style="background:#ec835a"></i>Power</span><span><i style="background:#7d7b74"></i>Exhaust</span></div>
+    </div>
+    <div class="card">
+      <canvas id="tachCv"></canvas>
+      <div class="card-h" style="margin:2px 0 0"><span>Boost / vacuum</span><b id="boostRead" style="font-family:var(--mono)">—</b></div>
+      <canvas id="boostCv"></canvas>
+      <div class="readouts">
+        <div><span>Power</span><b id="rdP">0</b></div>
+        <div><span>Torque</span><b id="rdT">0</b></div>
+        <div><span>Load</span><b id="rdL">0%</b></div>
+        <div><span>AFR</span><b id="rdA">—</b></div>
+        <div><span>EGT</span><b id="rdE">—</b></div>
+        <div><span>Ign. retard</span><b id="rdR">—</b></div>
+        <div><span>Fuel flow</span><b id="rdF">—</b></div>
+        <div><span>BSFC</span><b id="rdB">—</b></div>
+        <div><span>Inj. duty</span><b id="rdI">—</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctrl-row">
+        <button class="ignite" id="btnStart">START ENGINE</button>
+        <button class="btn" id="btnDyno" style="justify-content:center">Dyno pull</button>
+      </div>
+      <button class="pedal" id="pedal">HOLD TO REV</button>
+      <div class="field"><label>Fixed throttle <b id="thrVal">0%</b></label><input type="range" id="thrFix" min="0" max="100" value="0"></div>
+      <div class="field"><label>Listen from</label>
+        <div class="mini-seg" id="micSeg" style="display:flex"><button data-m="exhaust" class="on" style="flex:1">Exhaust</button><button data-m="cabin" style="flex:1">Cabin</button><button data-m="bay" style="flex:1">Engine bay</button></div></div>
+      <div class="field"><label>Volume <b id="volVal">70%</b></label><input type="range" id="vol" min="0" max="100" value="70"></div>
+      <div class="keys"><kbd>S</kbd> start/stop · <kbd>Space</kbd>/<kbd>W</kbd> rev · <kbd>D</kbd> dyno pull · <kbd>R</kbd> drag run</div>
+      <div class="status" id="audioStatus"></div>
+    </div>
+  </aside>
+</main>
+
+<div class="toast" id="toast"></div>
+<div class="modal-bg" id="blown" hidden>
+  <div class="modal">
+    <div style="font-size:44px">💥</div>
+    <h2 id="blownTitle">Engine destroyed</h2>
+    <p id="blownMsg"></p>
+    <button class="btn primary" id="btnRebuild">Rebuild engine</button>
+  </div>
+</div>
+<div class="modal-bg" id="resModalBg" hidden>
+  <div class="modal res-modal" id="resModal">
+    <h2 id="resTitle"></h2>
+    <div id="resBody"></div>
+    <div class="ctrl-row" style="margin-top:16px"><button class="btn primary" id="resBack" style="justify-content:center">Back to career</button><button class="btn" id="resStay" style="justify-content:center">Stay here</button></div>
+  </div>
+</div>
+<div class="splash" id="splash">
+  <div class="modal">
+    <h2 style="margin:0 0 8px">Welcome to the engine lab</h2>
+    <ul>
+      <li>Pick parts on the left: layout, cylinders, bore × stroke, cams, turbos, fuel, tune, exhaust, hybrid.</li>
+      <li>Power and torque curves update live as you change things. Pin a baseline to compare.</li>
+      <li>Start the engine and rev it — the sound is synthesized from each cylinder's real firing order.</li>
+      <li>Run a dyno pull, take it to the drag strip, and try the challenges. Push too hard and it might blow.</li>
+      <li>Try <b>Career</b> mode (top right): start with a junker, win races, buy parts, climb to Legend.</li>
+    </ul>
+    <button class="btn primary" id="btnEnter" style="width:100%;justify-content:center;padding:11px">Enter the shop (enables sound)</button>
+  </div>
+</div>
+
+<script src="lib/three.min.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/presets.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/career.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/viz.js"></script>
+<script src="js/drive3d.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
